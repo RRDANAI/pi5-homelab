@@ -1,0 +1,26 @@
+# Sensitive configuration files
+.env
+
+# Actual configured files (use .template versions instead)
+docker-compose.yml
+Caddyfile
+tailscaled
+
+# Docker volumes and data
+db_storage/
+n8n_storage/
+redis_storage/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
