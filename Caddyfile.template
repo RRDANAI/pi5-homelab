@@ -16,10 +16,18 @@
 # Private Tailscale domain (UI + API allowed, internal use)
 your-hostname.your-tailnet.ts.net {
 	# Caddy 2.5+ will fetch this .ts.net certificate from the local Tailscale daemon
-	reverse_proxy 127.0.0.1:5678 {
-		flush_interval -1
+
+	# Grafana logs dashboard at /grafana
+	handle_path /grafana* {
+		reverse_proxy 127.0.0.1:3000
 	}
-	# Proxy all requests to n8n (UI and API fully accessible on the tailnet domain)
+
+	# n8n UI and API (default)
+	handle {
+		reverse_proxy 127.0.0.1:5678 {
+			flush_interval -1
+		}
+	}
 }
 
 # Public domain for webhooks (only specific paths allowed)
@@ -32,12 +40,6 @@ your-domain.com {
 	handle {
 		respond "Forbidden" 403 # block any non-webhook requests on this domain
 	}
-}
-
-# Grafana logs dashboard (accessible via Tailscale only)
-logs.your-hostname.your-tailnet.ts.net {
-	# Caddy 2.5+ will fetch this .ts.net certificate from the local Tailscale daemon
-	reverse_proxy 127.0.0.1:3000
 }
 
 # /etc/caddy/Caddyfile

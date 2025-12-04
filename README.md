@@ -261,23 +261,18 @@ Add Grafana configuration to your `.env` file:
 
 ```bash
 # Grafana Configuration
-GF_SERVER_ROOT_URL=https://logs.your-hostname.your-tailnet.ts.net
-GF_SERVER_DOMAIN=logs.your-hostname.your-tailnet.ts.net
+# Grafana will be accessible at /grafana on your Tailscale domain
+GF_SERVER_ROOT_URL=https://your-hostname.your-tailnet.ts.net/grafana
+GF_SERVER_DOMAIN=your-hostname.your-tailnet.ts.net
 GF_ADMIN_USER=admin
 GF_ADMIN_PASSWORD=your_secure_grafana_password
 ```
 
 #### 2. Update Caddyfile
 
-Add the Grafana subdomain to your Caddyfile (replace with your actual Tailscale domain):
+The Caddyfile template already includes Grafana routing on the `/grafana` path of your main Tailscale domain. Make sure your Caddyfile includes the handle_path block for Grafana (it's in the template).
 
-```
-logs.your-hostname.your-tailnet.ts.net {
-    reverse_proxy 127.0.0.1:3000
-}
-```
-
-Then reload Caddy:
+After updating your Caddyfile, reload Caddy:
 ```bash
 sudo systemctl reload caddy
 ```
@@ -299,9 +294,9 @@ docker compose -f docker-compose.logging.yml logs -f
 
 #### 4. Access Grafana
 
-Navigate to your Grafana instance via Tailscale:
+Navigate to your Grafana instance via Tailscale at the `/grafana` path:
 ```
-https://logs.your-hostname.your-tailnet.ts.net
+https://your-hostname.your-tailnet.ts.net/grafana
 ```
 
 Login with the credentials from your `.env` file (default: admin/admin).
