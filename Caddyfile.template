@@ -34,4 +34,10 @@ your-domain.com {
 	}
 }
 
+# Grafana logs dashboard (accessible via Tailscale only)
+logs.your-hostname.your-tailnet.ts.net {
+	# Caddy 2.5+ will fetch this .ts.net certificate from the local Tailscale daemon
+	reverse_proxy 127.0.0.1:3000
+}
+
 # /etc/caddy/Caddyfile
