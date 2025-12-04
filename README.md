@@ -193,11 +193,21 @@ docker compose up -d
 
 ```
 .
-├── Caddyfile.template         # Caddy reverse proxy configuration
-├── docker-compose.yml.template # Docker services definition
-├── init-data.sh               # PostgreSQL initialization script
-├── tailscaled.template        # Tailscale daemon configuration
-└── README.md                  # This file
+├── Caddyfile.template              # Caddy reverse proxy configuration
+├── docker-compose.yml.template      # Main n8n stack definition
+├── docker-compose.logging.yml       # Logging stack (Loki/Promtail/Grafana)
+├── init-data.sh                    # PostgreSQL initialization script
+├── tailscaled.template             # Tailscale daemon configuration
+├── config/
+│   ├── loki/
+│   │   └── loki-config.yml        # Loki configuration with retention
+│   ├── promtail/
+│   │   └── promtail-config.yml    # Log collection and filtering
+│   └── grafana/
+│       └── provisioning/
+│           ├── datasources/       # Auto-configure Loki datasource
+│           └── dashboards/        # Pre-built n8n logs dashboard
+└── README.md                       # This file
 ```
 
 ## Troubleshooting
@@ -230,12 +240,174 @@ docker compose logs redis
 docker compose logs n8n-worker
 ```
 
+## Centralized Logging (Optional)
+
+This project includes an optional Loki + Promtail + Grafana stack for centralized logging and monitoring of your n8n homelab.
+
+### Logging Features
+
+- **Loki**: Efficient log aggregation optimized for Raspberry Pi
+- **Promtail**: Automatic Docker container log collection with intelligent filtering
+- **Grafana**: Beautiful dashboards for log visualization and search
+- **Smart Filtering**: Automatically filters out noisy Redis/PostgreSQL health checks
+- **Retention Policies**: 14 days for all logs, 30+ days for errors/warnings
+- **Tailscale Access**: Secure access to Grafana UI via your Tailscale domain
+
+### Setup Logging Stack
+
+#### 1. Update Environment Variables
+
+Add Grafana configuration to your `.env` file:
+
+```bash
+# Grafana Configuration
+# Grafana will be accessible at /grafana on your Tailscale domain
+GF_SERVER_ROOT_URL=https://your-hostname.your-tailnet.ts.net/grafana
+GF_SERVER_DOMAIN=your-hostname.your-tailnet.ts.net
+GF_ADMIN_USER=admin
+GF_ADMIN_PASSWORD=your_secure_grafana_password
+```
+
+#### 2. Update Caddyfile
+
+The Caddyfile template already includes Grafana routing on the `/grafana` path of your main Tailscale domain. Make sure your Caddyfile includes the handle_path block for Grafana (it's in the template).
+
+After updating your Caddyfile, reload Caddy:
+```bash
+sudo systemctl reload caddy
+```
+
+#### 3. Start Logging Stack
+
+Launch both the main n8n stack and logging stack together:
+
+```bash
+# Start everything
+docker compose -f docker-compose.yml -f docker-compose.logging.yml up -d
+
+# Check status
+docker compose -f docker-compose.yml -f docker-compose.logging.yml ps
+
+# View logging stack logs
+docker compose -f docker-compose.logging.yml logs -f
+```
+
+#### 4. Access Grafana
+
+Navigate to your Grafana instance via Tailscale at the `/grafana` path:
+```
+https://your-hostname.your-tailnet.ts.net/grafana
+```
+
+Login with the credentials from your `.env` file (default: admin/admin).
+
+### Using the Logging Dashboard
+
+The included "n8n Homelab Logs" dashboard provides:
+
+1. **Errors & Warnings Panel**: Shows only ERROR and WARN level logs from n8n
+2. **PostgreSQL Logs**: Database logs (health checks filtered out)
+3. **Redis Logs**: Queue logs (connection chatter filtered out)
+4. **All n8n Logs**: Complete n8n container logs for detailed debugging
+
+### Log Queries
+
+Some useful LogQL queries for Grafana Explore:
+
+```logql
+# All errors across all containers
+{container=~".+"} |~ "ERROR"
+
+# n8n workflow execution errors
+{container=~"n8n.*"} |~ "execution.*failed"
+
+# PostgreSQL connection issues
+{container="postgres"} |~ "connection|error"
+
+# Redis errors only (not INFO)
+{container="redis"} |~ "ERROR|ERR"
+
+# Logs from last hour with "webhook" keyword
+{container=~"n8n.*"} |~ "webhook" | json | line_format "{{.message}}"
+```
+
+### Log Retention
+
+The logging stack is configured with retention policies optimized for your 1TB SSD:
+
+- **Standard logs**: 14 days (debugging recent workflows)
+- **Errors/warnings**: Kept longer via label-based retention
+- **Automatic cleanup**: Compactor runs every 10 minutes
+- **Write optimization**: Chunking configured to minimize SSD wear
+
+### Managing the Logging Stack
+
+```bash
+# Stop only logging services (keeps n8n running)
+docker compose -f docker-compose.logging.yml down
+
+# Restart Promtail after config changes
+docker compose -f docker-compose.logging.yml restart promtail
+
+# Check Loki storage usage
+docker exec loki du -sh /loki
+
+# View real-time logs being collected
+docker compose -f docker-compose.logging.yml logs -f promtail
+
+# Remove all logging data and start fresh
+docker compose -f docker-compose.logging.yml down -v
+docker compose -f docker-compose.logging.yml up -d
+```
+
+### Filtering Out Noisy Logs
+
+The Promtail configuration (`config/promtail/promtail-config.yml`) includes filters for:
+
+- Redis PING commands and connection chatter
+- PostgreSQL pg_isready health checks
+- PostgreSQL connection lifecycle logs
+- Database checkpoint messages
+
+You can add more filters by editing the configuration and restarting Promtail.
+
+### Troubleshooting Logging
+
+#### Grafana shows "No data"
+```bash
+# Check if Loki is receiving logs
+curl http://localhost:3100/loki/api/v1/labels
+
+# Check Promtail is running and connected
+docker compose -f docker-compose.logging.yml logs promtail
+```
+
+#### Logs not appearing
+```bash
+# Verify Promtail can access Docker socket
+docker compose -f docker-compose.logging.yml exec promtail ls -la /var/run/docker.sock
+
+# Check Promtail positions file
+docker compose -f docker-compose.logging.yml exec promtail cat /tmp/positions.yaml
+```
+
+#### High disk usage
+```bash
+# Check Loki storage
+docker exec loki du -sh /loki/*
+
+# Manually trigger compaction (if needed)
+curl -X POST http://localhost:3100/loki/api/v1/delete?match={container=~".+"}
+```
+
 ## Resources
 
 - [n8n Documentation](https://docs.n8n.io/)
 - [Caddy Documentation](https://caddyserver.com/docs/)
 - [Tailscale Documentation](https://tailscale.com/kb/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
+- [Grafana Loki Documentation](https://grafana.com/docs/loki/latest/)
+- [LogQL Query Language](https://grafana.com/docs/loki/latest/logql/)
 
 ## License
 
