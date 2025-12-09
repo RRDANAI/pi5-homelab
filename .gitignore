@@ -1,10 +1,7 @@
 # Sensitive configuration files
 .env
 
-# Docker volumes and data
-db/
-n8n/
-redis/
+
 
 # Logs
 *.log
@@ -20,3 +17,32 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+Service-specific ignores
+
+# Tailscale
+ts/
+
+# Ignore everything in dozzle-data
+**/dozzle-data/dozzle-data/*
+
+# Allow gitkeep
+!**/dozzle-data/.gitkeep
+
+# Allow example-users.yml anywhere under dozzle-data
+!**/dozzle-data/example-users.yml
+
+
+**/glance/glance-data/config/glance.yml
+
+# Volumes
+**/volumes/n8n/*
+**/volumes/db/*
+**/volumes/redis/*
+
+
+!**/volumes/.gitkeep
+!**/volumes/n8n/.gitkeep
+!**/volumes/db/.gitkeep
+!**/volumes/redis/.gitkeep
+**/glance/glance-data/config/glance.yml
