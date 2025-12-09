@@ -7,6 +7,3 @@ TS_PERMIT_CERT_UID=caddy
 
 # Extra flags you might want to pass to tailscaled.
 FLAGS=""
-
-
-# /etc/default/tailscaled
