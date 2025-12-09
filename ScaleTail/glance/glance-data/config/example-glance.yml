@@ -1,0 +1,405 @@
+# ============================================================================
+# GLANCE DASHBOARD CONFIGURATION
+# ============================================================================
+# Glance is a self-hosted dashboard for monitoring services, feeds, and more.
+# Documentation: https://github.com/glanceapp/glance
+#
+# FILE LOCATION: Mount this file to /app/glance.yml in your container
+#
+# DOCKER COMPOSE EXAMPLE:
+#   services:
+#     glance:
+#       image: glanceapp/glance
+#       volumes:
+#         - ./glance.yml:/app/glance.yml:ro
+#         - /var/run/docker.sock:/var/run/docker.sock:ro  # Required for container widget
+#       ports:
+#         - 8080:8080
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# THEME CONFIGURATION
+# ----------------------------------------------------------------------------
+# Colors use HSL format: hue (0-360), saturation (0-100), lightness (0-100)
+# - background-color: Main dashboard background
+# - primary-color: Accent color for highlights and links
+# - positive-color: Used for positive indicators (green tones)
+# - negative-color: Used for negative indicators (red tones)
+# - contrast-multiplier: Adjusts text contrast (1.0 = default, higher = more contrast)
+theme:
+  background-color: 25 12 10        # Warm dark brown
+  primary-color: 30 85 55          # Orange/amber accent
+  positive-color: 150 60 50        # Teal/green for positive status
+  negative-color: 0 70 60          # Red for negative status
+  contrast-multiplier: 1.15        # Slightly increased contrast
+
+# ============================================================================
+# PAGES CONFIGURATION
+# ============================================================================
+# Each page appears in the navigation bar (unless hidden)
+# The first page is the default/home page
+#
+# Page Properties:
+#   - name: Display name in navigation
+#   - slug: URL path (auto-generated from name if not set)
+#   - width: slim | default | wide (controls max content width)
+#   - hide-desktop-navigation: true/false (hide nav bar on desktop)
+#   - show-mobile-header: true/false (show page title on mobile)
+#   - center-vertically: true/false (vertically center content)
+#   - columns: Array of column definitions
+# ============================================================================
+
+pages:
+  # ==========================================================================
+  # HOME PAGE - Clean, minimal startpage
+  # ==========================================================================
+  # This is your landing page with search, service monitor, and quick links.
+  # The "slim" width keeps it compact and focused.
+  - name: Home
+    width: slim
+
+    # NAVIGATION SETTINGS
+    # Set to true if you want a minimal look without the nav bar
+    # Set to false to show navigation to other pages
+    hide-desktop-navigation: false
+
+    # Shows the page name header on mobile devices
+    show-mobile-header: true
+
+    # Centers content vertically (nice for startpages)
+    center-vertically: true
+
+    # COLUMNS
+    # size options: small | full | grow
+    # "full" takes remaining space after small columns
+    columns:
+      - size: full
+        widgets:
+          # ------------------------------------------------------------------
+          # SEARCH WIDGET
+          # ------------------------------------------------------------------
+          # Universal search with custom "bangs" (shortcuts)
+          # Usage: Type "!yt cats" to search YouTube for "cats"
+          #
+          # Available search engines: duckduckgo, google, bing, etc.
+          # Bangs use {QUERY} as placeholder for search term
+          - type: search
+            autofocus: true                    # Auto-focus search on page load
+            search-engine: duckduckgo          # Default search engine
+            bangs:
+              - title: YouTube
+                shortcut: "!yt"
+                url: https://www.youtube.com/results?search_query={QUERY}
+              - title: GitHub
+                shortcut: "!gh"
+                url: https://github.com/search?q={QUERY}
+              - title: Docker Hub
+                shortcut: "!dh"
+                url: https://hub.docker.com/search?q={QUERY}
+              - title: n8n Docs
+                shortcut: "!n8n"
+                url: https://docs.n8n.io/search/?q={QUERY}
+
+          # ------------------------------------------------------------------
+          # SERVICE MONITOR
+          # ------------------------------------------------------------------
+          # Checks if your services are up/responding
+          #
+          # Properties:
+          #   - cache: How long to cache results (1m = 1 minute)
+          #   - sites: List of services to monitor
+          #
+          # Icons use Simple Icons prefix "si:" - find icons at simpleicons.org
+          - type: monitor
+            cache: 1m
+            title: Self-Hosted Services
+            sites:
+              - title: n8n (Prod)
+                url: https://pi5.tailnet.ts.net/
+                icon: si:n8n
+              - title: n8n (Dev)
+                url: https://racknerd.tailnet.ts.net/
+                icon: si:n8n
+              - title: Dozzle
+                url: https://dozzle.tailnet.ts.net/
+                icon: si:docker
+              - title: Tailscale
+                url: https://login.tailscale.com/admin/machines
+                icon: si:tailscale
+
+          # ------------------------------------------------------------------
+          # BOOKMARKS
+          # ------------------------------------------------------------------
+          # Quick links organized into groups
+          #
+          # Properties:
+          #   - groups: Organize links by category
+          #   - color: HSL color for the group header
+          #   - same-tab: true to open in same tab (default: new tab)
+          - type: bookmarks
+            groups:
+              - title: Social & Media
+                color: 30 70 55                # Orange tint
+                links:
+                  - title: YouTube
+                    url: https://www.youtube.com/
+                    icon: si:youtube
+                  - title: YouTube Music
+                    url: https://music.youtube.com/
+                    icon: si:youtubemusic
+                  - title: X
+                    url: https://x.com/
+                    icon: si:x
+              - title: Homelab
+                color: 150 60 50               # Green/teal tint
+                links:
+                  - title: Tailscale Admin
+                    url: https://login.tailscale.com/admin/machines
+                    icon: si:tailscale
+                  - title: GitHub
+                    url: https://github.com/
+                    icon: si:github
+                  - title: Docker Hub
+                    url: https://hub.docker.com/
+                    icon: si:docker
+
+  # ==========================================================================
+  # DASHBOARD PAGE - Full homelab monitoring view
+  # ==========================================================================
+  # Comprehensive dashboard with weather, calendar, containers, feeds, etc.
+  # Uses a 3-column layout: small | full | small
+  - name: Dashboard
+    show-mobile-header: true
+
+    columns:
+      # ----------------------------------------------------------------------
+      # LEFT SIDEBAR (small column)
+      # ----------------------------------------------------------------------
+      - size: small
+        widgets:
+          # WEATHER
+          # Get your location string from: https://www.google.com/search?q=weather
+          # Units: imperial (°F) or metric (°C)
+          - type: weather
+            location: Virginia, United States
+            units: imperial
+            hour-format: 12h
+
+          # CALENDAR
+          # Simple month view calendar
+          # first-day-of-week: sunday | monday
+          - type: calendar
+            first-day-of-week: sunday
+
+          # RELEASE TRACKER
+          # Monitors GitHub/GitLab/Docker Hub for new releases
+          # Great for tracking updates to software you use
+          #
+          # Repository formats:
+          #   - owner/repo (GitHub default)
+          #   - gitlab:owner/repo
+          #   - codeberg:owner/repo
+          #   - dockerhub:owner/image
+          - type: releases
+            cache: 6h                          # Check every 6 hours
+            title: Software Updates
+            show-source-icon: true             # Show GitHub/Docker icon
+            collapse-after: 5                  # Collapse list after 5 items
+            repositories:
+              - n8n-io/n8n
+              - glanceapp/glance
+              - amir20/dozzle
+              - tailscale/tailscale
+              - caddyserver/caddy
+
+      # ----------------------------------------------------------------------
+      # MAIN CONTENT (full column)
+      # ----------------------------------------------------------------------
+      - size: full
+        widgets:
+          # DOCKER CONTAINERS
+          # ⚠️  IMPORTANT: Requires docker.sock to be mounted!
+          # Add this volume to your Glance container:
+          #   - /var/run/docker.sock:/var/run/docker.sock:ro
+          #
+          # Container labels (optional) - add to your containers:
+          #   labels:
+          #     glance.name: "Display Name"
+          #     glance.icon: si:iconname
+          #     glance.url: https://service.url
+          #     glance.description: "What this does"
+          #     glance.hide: false
+          - type: docker-containers
+            title: Docker Containers
+
+          # GROUPED WIDGETS (TABS)
+          # The "group" widget creates tabbed sections
+          # Each widget in the list becomes its own tab
+          - type: group
+            widgets:
+              # HACKER NEWS
+              # Tech/startup news from news.ycombinator.com
+              - type: hacker-news
+                title: Hacker News
+                limit: 15
+                collapse-after: 8
+
+              # LOBSTERS
+              # Programming/tech focused news
+              - type: lobsters
+                title: Lobsters
+                limit: 15
+                collapse-after: 8
+
+          # YOUTUBE VIDEOS
+          # Displays latest videos from specified channels
+          #
+          # To find channel IDs:
+          # 1. Go to the channel page
+          # 2. View page source (Ctrl+U)
+          # 3. Search for "channelId" or "externalId"
+          #
+          # Styles: grid-cards | list
+          - type: videos
+            title: Tech YouTube
+            style: grid-cards
+            collapse-after-rows: 2
+            channels:
+              - UCR-DXc1voovS8nhAvccRZhg  # Jeff Geerling
+              - UCsBjURrPoezykLs9EqgamOA  # Fireship
+              - UC2eYFnH61tmytImy1mTYvhA  # NetworkChuck
+              - UCg6gPGh8HU2U01vaFCAsvmQ  # Chris Titus Tech
+              - UCOk-gHyjcWZNj3Br4oxwh0A  # Techno Tim
+              - UCVls1GmFKf6WlTraIb_IaJg  # DistroTube
+
+      # ----------------------------------------------------------------------
+      # RIGHT SIDEBAR (small column)
+      # ----------------------------------------------------------------------
+      - size: small
+        widgets:
+          # SERVER STATS
+          # Shows CPU, memory, disk usage for local machine
+          #
+          # Server types:
+          #   - type: local (machine running Glance)
+          #   - type: remote (requires Glance Agent on remote machine)
+          #
+          # For Raspberry Pi, you may need to specify cpu-temp-sensor
+          - type: server-stats
+            servers:
+              - type: local
+                name: Nerdrack VPS
+
+          # COMPACT SERVICE MONITOR
+          # Duplicate of home page monitor for quick sidebar view
+          # style: compact | default
+          - type: monitor
+            cache: 1m
+            title: Services
+            style: compact
+            sites:
+              - title: n8n Prod
+                url: https://pi5.tailnet.ts.net/
+                icon: si:n8n
+              - title: n8n Dev
+                url: https://racknerd.tailnet.ts.net/
+                icon: si:n8n
+              - title: Dozzle
+                url: https://dozzle.tailnet.ts.net/
+                icon: si:docker
+
+          # HACKER NEWS (sidebar view)
+          # Smaller feed for quick scanning
+          - type: hacker-news
+            title: Tech News
+            limit: 10
+            collapse-after: 5
+
+  # ==========================================================================
+  # FEEDS PAGE - Content consumption hub
+  # ==========================================================================
+  # Aggregates RSS feeds and tech news sources
+  - name: Feeds
+    show-mobile-header: true
+
+    columns:
+      - size: full
+        widgets:
+          # RSS FEED AGGREGATOR
+          # Combines multiple RSS feeds into one view
+          #
+          # Properties:
+          #   - style: horizontal-cards | horizontal-cards-2 | list | detailed-list
+          #   - limit: Max items to show
+          #   - cache: How long to cache feeds
+          #   - collapse-after: Items before "show more"
+          #   - preserve-order: true = feed order, false = sort by date
+          #
+          # Per-feed options:
+          #   - url: RSS feed URL
+          #   - title: Override feed title
+          #   - limit: Per-feed item limit
+          - type: rss
+            title: Tech News
+            style: horizontal-cards
+            limit: 15
+            collapse-after: 8
+            cache: 2h
+            feeds:
+              # Self-hosted focused news
+              - url: https://selfh.st/rss/
+                title: selfh.st
+              # Cloudflare engineering blog
+              - url: https://blog.cloudflare.com/rss/
+                title: Cloudflare Blog
+              # Tailscale blog (VPN/networking)
+              - url: https://tailscale.com/blog/index.xml
+                title: Tailscale Blog
+              # Linux hardware news
+              - url: https://www.phoronix.com/rss.php
+                title: Phoronix
+              # Linux/open source deep dives
+              - url: https://lwn.net/headlines/rss
+                title: LWN.net
+
+          # TABBED NEWS FEEDS
+          # Lobsters and Hacker News side by side in tabs
+          - type: group
+            widgets:
+              - type: lobsters
+                limit: 15
+                collapse-after: 8
+              - type: hacker-news
+                limit: 15
+                collapse-after: 8
+
+# ============================================================================
+# ADDITIONAL NOTES
+# ============================================================================
+#
+# ADDING MORE WIDGETS:
+# Check the full widget list at: https://github.com/glanceapp/glance/blob/main/docs/configuration.md
+#
+# Common widgets not used above:
+#   - type: markets        # Stock/crypto prices (Yahoo Finance)
+#   - type: twitch-channels # Twitch streamer status
+#   - type: twitch-top-games
+#   - type: repository     # GitHub repo stats
+#   - type: iframe         # Embed external content
+#   - type: to-do          # Browser-stored task list
+#   - type: custom-api     # Build your own with templates
+#
+# ICON SOURCES:
+#   - si:iconname          # Simple Icons (simpleicons.org)
+#   - mdi:iconname         # Material Design Icons
+#   - sh:iconname          # selfh.st icons
+#   - di:iconname          # Dashboard Icons (homarr-labs)
+#   - https://url/icon.png # Direct URL to image
+#
+# TROUBLESHOOTING:
+#   - Container widget not working? Mount docker.sock (see above)
+#   - Weather not loading? Check location string format
+#   - Feeds 403 error? Some sites block automated requests
+#   - CSS customization? Add custom.css and mount to container
+#
+# ============================================================================
